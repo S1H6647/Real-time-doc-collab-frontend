@@ -28,8 +28,8 @@ export default function Login() {
   const onSubmit = async (data: LoginForm) => {
     try {
       const response = await authApi.login(data);
-      const { user, token } = response.data;
-      setAuth(user, token);
+      const { id, name, email, token } = response.data;
+      setAuth({ id, name, email, role: 'USER' }, token);
       toast.success('Welcome back!');
       navigate('/documents');
     } catch (error: any) {

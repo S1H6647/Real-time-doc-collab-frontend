@@ -55,7 +55,8 @@ export default function Editor({ documentId, initialContent, onStatusChange, onP
   }, [editor]);
 
   const handleEditReceived = useCallback((event: DocumentEditEvent) => {
-    if (event.editorId === user?.id) return;
+    // Use email for deduplication (always a plain string, not UUID)
+    if (event.editorEmail === user?.email) return;
     
     const currentEditor = editorRef.current;
     if (!currentEditor) return;
@@ -64,7 +65,7 @@ export default function Editor({ documentId, initialContent, onStatusChange, onP
     if (currentHTML !== event.content) {
       currentEditor.commands.setContent(event.content, false);
     }
-  }, [user?.id]);
+  }, [user?.email]);
 
   // Stable callbacks for the provider
   const callbacksRef = useRef({ onStatusChange, onPresenceUpdate, handleEditReceived });
