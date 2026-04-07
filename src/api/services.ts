@@ -1,38 +1,42 @@
 import apiClient from '../api/apiClient';
-import type { Document, DocumentWithCollaborators, User, DocumentHistory, Notification } from '../types';
+import type { Document, DocumentWithCollaborators, User, Notification, PaginatedResponse } from '../types';
 
 // Auth API
 export const authApi = {
   login: (data: any) => apiClient.post('/auth/login', data),
   register: (data: any) => apiClient.post('/auth/register', data),
-  me: () => apiClient.get<User>('/auth/me'),
+  // me endpoint is missing in backend, but we can potentially use a profile endpoint if added later
 };
 
 // Documents API
 export const documentApi = {
   list: (params?: any) => apiClient.get<Document[]>('/documents', { params }),
   get: (id: string) => apiClient.get<DocumentWithCollaborators>(`/documents/${id}`),
-  create: (data: Partial<Document>) => apiClient.post<Document>('/documents', data),
-  update: (id: string, data: Partial<Document>) => apiClient.put<Document>(`/documents/${id}`, data),
+  create: (data: { title: string, content?: string }) => apiClient.post<Document>('/documents', data),
+  updateTitle: (id: string, title: string) => apiClient.patch(`/documents/${id}`, { title }),
+  editContent: (id: string, content: string) => apiClient.patch(`/documents/${id}/content`, { content }),
+  save: (id: string, data: { title?: string, content?: string }) => apiClient.put<Document>(`/documents/${id}`, data),
   delete: (id: string) => apiClient.delete(`/documents/${id}`),
-  archive: (id: string) => apiClient.post(`/documents/${id}/archive`),
-  getHistory: (id: string) => apiClient.get<DocumentHistory[]>(`/documents/${id}/history`),
+  getHistory: (id: string) => apiClient.get<any>(`/documents/${id}/history`),
 };
 
 // Collaborator API
 export const collaboratorApi = {
+  list: (docId: string) => apiClient.get(`/documents/${docId}/collaborators`),
   add: (docId: string, email: string, role: string) => 
     apiClient.post(`/documents/${docId}/collaborators`, { email, role }),
   update: (docId: string, userId: string, role: string) => 
-    apiClient.put(`/documents/${docId}/collaborators/${userId}`, { role }),
+    apiClient.patch(`/documents/${docId}/collaborators/${userId}/role`, { role }),
   remove: (docId: string, userId: string) => 
     apiClient.delete(`/documents/${docId}/collaborators/${userId}`),
 };
 
 // Notifications API
 export const notificationApi = {
-  list: () => apiClient.get<Notification[]>('/notifications'),
-  markAsRead: (id: string) => apiClient.post(`/notifications/${id}/read`),
+  list: (page = 0, size = 20) => apiClient.get<PaginatedResponse<Notification>>('/notifications', { params: { page, size } }),
+  getUnreadCount: () => apiClient.get<{ unread: number }>('/notifications/unread-count'),
+  markAsRead: (id: string) => apiClient.patch(`/notifications/${id}/read`),
+  markAllAsRead: () => apiClient.patch('/notifications/read-all'),
 };
 
 // Admin API
@@ -41,3 +45,4 @@ export const adminApi = {
   listUsers: () => apiClient.get<User[]>('/admin/users'),
   deleteUser: (id: string) => apiClient.delete(`/admin/users/${id}`),
 };
+

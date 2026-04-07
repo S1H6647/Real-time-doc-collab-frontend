@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { notificationApi } from '../api/services';
 import { format } from 'date-fns';
 
@@ -23,10 +23,26 @@ export default function AppLayout() {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isNotifyOpen, setNotifyOpen] = useState(false);
 
-  const { data: notifications } = useQuery({
+  const { data: notificationData } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => notificationApi.list().then(res => res.data),
-    refetchInterval: 30000, // Polling every 30s
+    refetchInterval: 30000,
+  });
+
+  const { data: unreadData } = useQuery({
+    queryKey: ['notifications-unread'],
+    queryFn: () => notificationApi.getUnreadCount().then(res => res.data),
+    refetchInterval: 30000,
+  });
+
+  const notifications = notificationData?.content || [];
+  const unreadCount = unreadData?.unread || 0;
+
+  const markAllReadMutation = useMutation({
+    mutationFn: () => notificationApi.markAllAsRead(),
+    onSuccess: () => {
+      // Invalidate queries to refresh UI
+    }
   });
 
   const handleLogout = () => {
@@ -134,8 +150,10 @@ export default function AppLayout() {
                 className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg relative"
               >
                 <Bell className="w-5 h-5" />
-                {Array.isArray(notifications) && notifications.some(n => !n.read) && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-4 h-4 bg-rose-500 rounded-full text-[10px] flex items-center justify-center font-bold text-white border-2 border-slate-900">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
                 )}
               </button>
 
@@ -149,10 +167,16 @@ export default function AppLayout() {
                   >
                     <div className="p-4 border-b border-slate-800 flex items-center justify-between">
                       <h3 className="font-bold text-slate-200">Notifications</h3>
-                      <button className="text-xs text-blue-500 hover:underline font-bold uppercase tracking-widest">Mark all as read</button>
+                      <button 
+                        onClick={() => markAllReadMutation.mutate()}
+                        className="text-xs text-blue-500 hover:underline font-bold uppercase tracking-widest disabled:opacity-50"
+                        disabled={unreadCount === 0}
+                      >
+                        Mark all as read
+                      </button>
                     </div>
                     <div className="max-h-96 overflow-y-auto custom-scrollbar">
-                      {!Array.isArray(notifications) || notifications.length === 0 ? (
+                      {notifications.length === 0 ? (
                         <div className="p-8 text-center text-slate-500 italic text-sm">No new notifications</div>
                       ) : (
                         notifications.map(n => (

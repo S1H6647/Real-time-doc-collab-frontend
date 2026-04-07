@@ -1,11 +1,8 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Collaboration from '@tiptap/extension-collaboration';
-import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
-import * as Y from 'yjs';
-import { StompProvider } from '../../api/stompProvider';
+import { StompProvider, DocumentEditEvent, PresenceEvent } from '../../api/stompProvider';
 import { useAuthStore } from '../auth/authStore';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { 
   Bold, 
   Italic, 
@@ -22,63 +19,27 @@ import {
 interface EditorProps {
   documentId: string;
   initialContent: string;
-  onAutoSave: (content: string) => void;
   onStatusChange?: (status: 'connected' | 'connecting' | 'disconnected') => void;
+  onPresenceUpdate?: (emails: string[]) => void;
 }
 
-const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-
-export default function Editor({ documentId, initialContent, onAutoSave, onStatusChange }: EditorProps) {
-  const { user, token } = useAuthStore();
-  const [ydoc] = useState(() => new Y.Doc());
+export default function Editor({ documentId, initialContent, onStatusChange, onPresenceUpdate }: EditorProps) {
+  const { token, user } = useAuthStore();
   const [provider, setProvider] = useState<StompProvider | null>(null);
-
-  useEffect(() => {
-    const wsBase = import.meta.env.VITE_WS_BASE_URL || 'http://localhost:8080/ws';
-    // Remove wss:// if we are using SockJS which usually starts with http/https
-    const sockUrl = wsBase.replace('wss://', 'https://').replace('ws://', 'http://');
-    
-    const newProvider = new StompProvider(
-      sockUrl, 
-      documentId, 
-      ydoc, 
-      { 
-        token,
-        onStatusChange: (status: any) => onStatusChange?.(status) 
-      }
-    );
-
-    setProvider(newProvider);
-
-    return () => {
-      newProvider.destroy();
-      ydoc.destroy();
-    };
-  }, [documentId, ydoc]);
+  
+  // Use a ref for the editor to avoid dependency cycles
+  const editorRef = useRef<any>(null);
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        history: false, // Collaboration handles history
-      }),
-      Collaboration.configure({
-        document: ydoc,
-      }),
-      ...(provider ? [
-        CollaborationCursor.configure({
-          provider,
-          user: {
-            name: user?.name || 'Anonymous',
-            color: colors[Math.floor(Math.random() * colors.length)],
-          },
-        })
-      ] : []),
+      StarterKit,
     ],
     content: initialContent,
     onUpdate({ editor }) {
       const content = editor.getHTML();
-      // Yjs handles real-time sync, but we might want to trigger auto-save for database persistence
-      onAutoSave(content);
+      if (provider) {
+        provider.sendEdit(content);
+      }
     },
     editorProps: {
       attributes: {
@@ -86,7 +47,54 @@ export default function Editor({ documentId, initialContent, onAutoSave, onStatu
         placeholder: 'Start typing here...'
       },
     }
-  }, [provider, user]);
+  }, [provider]);
+
+  // Keep editorRef in sync
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
+
+  const handleEditReceived = useCallback((event: DocumentEditEvent) => {
+    if (event.editorId === user?.id) return;
+    
+    const currentEditor = editorRef.current;
+    if (!currentEditor) return;
+
+    const currentHTML = currentEditor.getHTML();
+    if (currentHTML !== event.content) {
+      currentEditor.commands.setContent(event.content, false);
+    }
+  }, [user?.id]);
+
+  // Stable callbacks for the provider
+  const callbacksRef = useRef({ onStatusChange, onPresenceUpdate, handleEditReceived });
+  useEffect(() => {
+    callbacksRef.current = { onStatusChange, onPresenceUpdate, handleEditReceived };
+  });
+
+  useEffect(() => {
+    const wsBase = import.meta.env.VITE_WS_BASE_URL || 'http://localhost:8080/ws';
+    const sockUrl = wsBase.replace('wss://', 'https://').replace('ws://', 'http://');
+    
+    const newProvider = new StompProvider(
+      sockUrl, 
+      documentId, 
+      { 
+        token,
+        onStatusChange: (status) => callbacksRef.current.onStatusChange?.(status),
+        onEditReceived: (event) => callbacksRef.current.handleEditReceived(event),
+        onPresenceUpdate: (event: PresenceEvent) => {
+           callbacksRef.current.onPresenceUpdate?.(event.activeEditors);
+        }
+      }
+    );
+
+    setProvider(newProvider);
+
+    return () => {
+      newProvider.destroy();
+    };
+  }, [documentId, token]); // Stable dependencies
 
   if (!editor) return null;
 

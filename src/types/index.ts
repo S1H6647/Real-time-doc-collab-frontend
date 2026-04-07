@@ -33,18 +33,26 @@ export interface DocumentWithCollaborators extends Document {
 export interface DocumentHistory {
   id: string;
   documentId: string;
-  userId: string;
-  userName: string;
+  editorId: string;
+  editorName: string;
   contentSnapshot: string;
-  timestamp: string;
-  changeDescription: string;
+  editedAt: string;
+  summary: string;
 }
 
 export interface Notification {
   id: string;
-  userId: string;
+  type: string;
   message: string;
-  link?: string;
+  referenceId?: string;
   read: boolean;
   createdAt: string;
+}
+
+export interface PaginatedResponse<T> {
+  content: T[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number;
 }

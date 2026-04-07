@@ -72,7 +72,7 @@ export default function HistoryDrawer({ isOpen, onClose, documentId }: HistoryDr
                 </div>
                 <p className="text-slate-400 font-medium">Failed to load history</p>
               </div>
-            ) : (!Array.isArray(history) || history.length === 0) ? (
+            ) : (!history?.entries || history.entries.length === 0) ? (
               <div className="text-center py-12">
                 <div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-700">
                   <HistoryIcon className="w-6 h-6 text-slate-500" />
@@ -83,7 +83,7 @@ export default function HistoryDrawer({ isOpen, onClose, documentId }: HistoryDr
               <div className="relative space-y-6">
                 <div className="absolute left-4 top-2 bottom-0 w-px bg-slate-800" />
                 
-  {history.map((item) => (
+  {history.entries.map((item: any) => (
                   <div key={item.id} className="relative pl-10 group">
                     <div className="absolute left-1.5 top-1.5 w-5 h-5 rounded-full bg-slate-900 border-4 border-slate-800 group-hover:border-violet-600 transition-all z-10" />
                     
@@ -91,20 +91,20 @@ export default function HistoryDrawer({ isOpen, onClose, documentId }: HistoryDr
                       <div className="flex items-center justify-between mb-3">
                          <div className="flex items-center gap-2">
                            <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center font-bold text-xs text-slate-400 border border-slate-700">
-                             {item.userName[0].toUpperCase()}
+                             {item.editorName[0].toUpperCase()}
                            </div>
-                           <span className="text-sm font-bold text-slate-200">{item.userName}</span>
+                           <span className="text-sm font-bold text-slate-200">{item.editorName}</span>
                          </div>
                          <button className="p-1.5 text-slate-600 hover:text-violet-500 rounded-lg hover:bg-violet-600/10 transition-all" title="Restore this version">
                            <RotateCcw className="w-4 h-4" />
                          </button>
                       </div>
                       
-                      <p className="text-xs text-slate-400 font-medium leading-relaxed italic mb-3">"{item.changeDescription}"</p>
+                      <p className="text-xs text-slate-400 font-medium leading-relaxed italic mb-3">"{item.summary}"</p>
                       
                       <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                         <Clock className="w-3 h-3" />
-                        <span>{format(new Date(item.timestamp), 'MMM d, HH:mm:ss')}</span>
+                        <span>{format(new Date(item.editedAt), 'MMM d, HH:mm:ss')}</span>
                       </div>
                     </div>
                   </div>
