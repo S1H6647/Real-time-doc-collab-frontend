@@ -117,21 +117,21 @@ export default function CollaboratorsModal({ isOpen, onClose, documentId, collab
             <label className="text-sm font-semibold text-slate-400 uppercase tracking-widest px-1">Current Collaborators</label>
             <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
               {Array.isArray(collaborators) && collaborators.map((collaborator) => (
-                <div key={collaborator.userId} className="flex items-center justify-between p-4 bg-slate-850/50 rounded-2xl border border-slate-800/50 hover:bg-slate-800 hover:border-slate-700 transition-all group">
+                <div key={collaborator.id} className="flex items-center justify-between p-4 bg-slate-850/50 rounded-2xl border border-slate-800/50 hover:bg-slate-800 hover:border-slate-700 transition-all group">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-400 border border-slate-700">
-                      {(collaborator.userName?.[0] || '?').toUpperCase()}
+                      {(collaborator.name?.[0] || '?').toUpperCase()}
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-slate-100 leading-none">{collaborator.userName || 'Unknown User'}</h4>
-                      <p className="text-[11px] text-slate-500 mt-1">{collaborator.userEmail || 'No email'}</p>
+                      <h4 className="text-sm font-bold text-slate-100 leading-none">{collaborator.name || 'Unknown User'}</h4>
+                      <p className="text-[11px] text-slate-500 mt-1">{collaborator.email || 'No email'}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <select
                       value={collaborator.role}
-                      onChange={(e) => updateRoleMutation.mutate({ userId: collaborator.userId, role: e.target.value as DocumentRole })}
+                      onChange={(e) => updateRoleMutation.mutate({ userId: collaborator.id, role: e.target.value as DocumentRole })}
                       disabled={collaborator.role === 'OWNER'}
                       className="bg-transparent text-xs font-bold text-slate-400 outline-none hover:text-blue-500 cursor-pointer disabled:cursor-default"
                     >
@@ -142,7 +142,7 @@ export default function CollaboratorsModal({ isOpen, onClose, documentId, collab
                     
                     {collaborator.role !== 'OWNER' && (
                       <button 
-                        onClick={() => removeMutation.mutate(collaborator.userId)}
+                        onClick={() => removeMutation.mutate(collaborator.id)}
                         className="p-1.5 text-slate-600 hover:text-rose-500 rounded-lg hover:bg-rose-500/10 transition-all opacity-0 group-hover:opacity-100"
                       >
                         <Trash2 className="w-4 h-4" />

@@ -20,9 +20,9 @@ export interface Document {
 }
 
 export interface Collaborator {
-  userId: string;
-  userEmail: string;
-  userName: string;
+  id: string;
+  name: string;
+  email: string;
   role: DocumentRole;
 }
 

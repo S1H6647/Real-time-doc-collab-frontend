@@ -2,7 +2,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { StompProvider, DocumentEditEvent, PresenceEvent } from '../../api/stompProvider';
 import { useAuthStore } from '../auth/authStore';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { 
   Bold, 
   Italic, 
@@ -25,10 +25,13 @@ interface EditorProps {
 
 export default function Editor({ documentId, initialContent, onStatusChange, onPresenceUpdate }: EditorProps) {
   const { token, user } = useAuthStore();
-  const [provider, setProvider] = useState<StompProvider | null>(null);
   
-  // Use a ref for the editor to avoid dependency cycles
+  // Keep provider in a ref — never triggers re-renders or editor recreation
+  const providerRef = useRef<StompProvider | null>(null);
   const editorRef = useRef<any>(null);
+
+  // Debounce timer ref — batches rapid keystrokes before sending over WebSocket
+  const sendTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const editor = useEditor({
     extensions: [
@@ -37,9 +40,11 @@ export default function Editor({ documentId, initialContent, onStatusChange, onP
     content: initialContent,
     onUpdate({ editor }) {
       const content = editor.getHTML();
-      if (provider) {
-        provider.sendEdit(content);
-      }
+      // Debounce: wait 300ms after the last keystroke before sending
+      if (sendTimer.current) clearTimeout(sendTimer.current);
+      sendTimer.current = setTimeout(() => {
+        providerRef.current?.sendEdit(content);
+      }, 300);
     },
     editorProps: {
       attributes: {
@@ -47,7 +52,8 @@ export default function Editor({ documentId, initialContent, onStatusChange, onP
         placeholder: 'Start typing here...'
       },
     }
-  }, [provider]);
+    // No [provider] dependency — editor is created once and never torn down
+  });
 
   // Keep editorRef in sync
   useEffect(() => {
@@ -90,12 +96,14 @@ export default function Editor({ documentId, initialContent, onStatusChange, onP
       }
     );
 
-    setProvider(newProvider);
+    providerRef.current = newProvider;
 
     return () => {
+      if (sendTimer.current) clearTimeout(sendTimer.current);
       newProvider.destroy();
+      providerRef.current = null;
     };
-  }, [documentId, token]); // Stable dependencies
+  }, [documentId, token]);
 
   if (!editor) return null;
 

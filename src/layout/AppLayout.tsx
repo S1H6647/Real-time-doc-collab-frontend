@@ -163,7 +163,7 @@ export default function AppLayout() {
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute right-0 mt-3 w-80 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                    className="absolute right-0 mt-3 w-80 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-[9999] overflow-hidden"
                   >
                     <div className="p-4 border-b border-slate-800 flex items-center justify-between">
                       <h3 className="font-bold text-slate-200">Notifications</h3>
